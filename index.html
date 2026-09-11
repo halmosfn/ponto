@@ -1,47 +1,85 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head> 
-<!-- Ícone para navegador e tela inicial do celular -->
-<link rel="icon" type="image/png" href="icone-192.png">
-<link rel="apple-touch-icon" href="icone-192.png">
-
-<!-- Faz o app abrir em tela cheia (sem barra de navegador) -->
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Ponto">
-
-    
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ponto</title>
+
+    <!-- Ícone para navegador e tela inicial do celular -->
+    <link rel="icon" type="image/png" href="icone-192.png">
+    <link rel="apple-touch-icon" href="icone-192.png">
+
+    <!-- Modo App em tela cheia -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Ponto">
+
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; display: flex; flex-direction: column; font-family: sans-serif; }
-        .btn { flex: 1; border: none; font-size: 40px; font-weight: bold; color: white; display: flex; align-items: center; justify-content: center; text-transform: uppercase; }
-        .btn:active { opacity: 0.7; }
-        #btn-entrada { background-color: #4CAF50; } /* Verde - Ocupa metade da tela */
-        #btn-saida { background-color: #F44336; } /* Vermelho - Ocupa metade da tela */
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            height: 100%; 
+            display: flex; 
+            flex-direction: column; 
+            font-family: Arial, sans-serif; 
+        }
+        .btn { 
+            flex: 1; 
+            border: none; 
+            font-size: 42px; 
+            font-weight: bold; 
+            color: white; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            text-transform: uppercase; 
+            cursor: pointer;
+        }
+        .btn:active { 
+            opacity: 0.7; 
+        }
+        #btn-entrada { 
+            background-color: #4CAF50; /* Verde */
+        }
+        #btn-saida { 
+            background-color: #F44336; /* Vermelho */
+        }
     </style>
 </head>
 <body>
 
-    <button id="btn-entrada" class="btn" onclick="registrar('ENTRADA')">ENTRAR</button>
-    <button id="btn-saida" class="btn" onclick="registrar('SAÍDA')">SAIR</button>
+    <button id="btn-entrada" class="btn" onclick="registrar('Entrada')">ENTRAR</button>
+    <button id="btn-saida" class="btn" onclick="registrar('Saída')">SAIR</button>
 
     <script>
-        // COLE A SUA URL AQUI
+        // Cole aqui a sua URL gerada no Google Apps Script
         const API_URL = "https://script.google.com/macros/s/AKfycbzkbvbc2Fh04SVRFaPkb-ByoG2euzQ3L7PnHbYf-ntqCucbfFzY1sdvFmB3YBINnVf3/exec";
 
+        function falar(texto) {
+            if ('speechSynthesis' in window) {
+                // Cancela falas anteriores caso ela aperte repetidas vezes
+                window.speechSynthesis.cancel();
+
+                const mensagem = new SpeechSynthesisUtterance(texto);
+                mensagem.lang = 'pt-BR';
+                mensagem.rate = 0.95; // Velocidade um pouco mais cadenciada para facilitar a compreensão
+                window.speechSynthesis.speak(mensagem);
+            }
+        }
+
         function registrar(acao) {
+            // Fala imediatamente no celular assim que ela toca no botão
+            falar(acao + " registrada com sucesso!");
+
+            // Envia o registro para o Google Sheets em segundo plano
             fetch(API_URL, {
                 method: 'POST',
-                mode: 'no-cors', // Garante que o celular não bloqueie o envio
+                mode: 'no-cors',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ acao: acao })
-            });
-            
-            // Aviso visual simples para ela saber que funcionou
-            alert("Sua " + acao + " foi registrada com sucesso!");
+            }).catch(erro => console.error("Erro ao enviar dados:", erro));
         }
     </script>
 </body>
 </html>
+
