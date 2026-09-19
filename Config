@@ -1,0 +1,5 @@
+//esse arquivo não está no projeto. Precisa copiar e colar
+
+const URL_WEB_APP = https://script.google.com/macros/s/AKfycbzx1kOOKCWoaworM4n7BS7DQwUs-z9zr1ETJuHhdkjP9cVIJlmvAj6rkO2dVWpSX5Wp8w/exec;
+const LAT_CASA = -8,0466951;   // Substitua pela sua latitude
+const LON_CASA = -34,9080722;  // Substitua pela sua longitude
