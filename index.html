@@ -5,15 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ponto</title>
 
+    <!-- Ícones e modo tela cheia -->
     <link rel="apple-touch-icon" href="icone-192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Ponto">
-
     <link rel="icon" type="image/png" sizes="192x192" href="icone-192.png">
-    <link rel="shortcut icon" href="icone-192.png">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#090d16">
 
     <style>
         * {
@@ -28,97 +27,123 @@
             height: 100%;
             width: 100%;
             overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: #0f172a;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #090d16;
             display: flex;
             flex-direction: column;
-            padding: 16px;
-            gap: 16px;
+            padding: 16px 16px 20px 16px;
+            gap: 14px;
         }
 
-        /* Ajuste automático caso o aparelho seja virado na horizontal */
-        @media (orientation: landscape) {
-            body, html {
-                flex-direction: row;
-            }
+        /* Barra de status superior */
+        .header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 8px;
+            color: #94a3b8;
+            font-size: 13px;
+            font-weight: 600;
         }
 
-        .card-ponto {
+        .wifi-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.06);
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .dot-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #f59e0b; /* Amarelo/Laranja padrão */
+        }
+
+        .dot-status.conectado {
+            background-color: #10b981; /* Verde */
+            box-shadow: 0 0 8px #10b981;
+        }
+
+        /* Cartões dos botões verticais */
+        .card-btn {
             flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            border-radius: 24px;
+            border-radius: 28px;
             border: none;
             cursor: pointer;
             color: #ffffff;
             position: relative;
-            overflow: hidden;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
             transition: transform 0.12s ease, filter 0.12s ease;
         }
 
-        .card-ponto:active {
+        .card-btn:active {
             transform: scale(0.97);
             filter: brightness(0.92);
         }
 
-        /* Gradiente Verde Esmeralda Moderno */
+        /* Cartão Entrada (Verde Esmeralda) */
         #btn-entrada {
             background: linear-gradient(145deg, #10b981 0%, #047857 100%);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        /* Gradiente Carmim/Rubi Moderno */
+        /* Cartão Saída (Vermelho Rubi) */
         #btn-saida {
             background: linear-gradient(145deg, #f43f5e 0%, #be123c 100%);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        .badge-icone {
-            width: 110px;
-            height: 110px;
+        .circulo-icone {
+            width: 104px;
+            height: 104px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.18);
-            backdrop-filter: blur(8px);
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 58px;
-            margin-bottom: 14px;
-            box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.25), 0 6px 16px rgba(0, 0, 0, 0.15);
+            font-size: 54px;
+            margin-bottom: 12px;
+            box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.3), 0 8px 20px rgba(0, 0, 0, 0.2);
         }
 
-        .rotulo {
-            font-size: 32px;
+        .texto-principal {
+            font-size: 34px;
             font-weight: 800;
             letter-spacing: 2px;
             text-transform: uppercase;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
         }
 
-        .subrotulo {
+        .texto-secundario {
             font-size: 15px;
             font-weight: 500;
             opacity: 0.9;
             margin-top: 4px;
         }
 
-        /* Notificação flutuante de status */
-        .status-pill {
+        /* Notificação flutuante */
+        .toast-notificacao {
             position: fixed;
-            bottom: 30px;
+            bottom: 35px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.95);
+            background: rgba(15, 23, 42, 0.96);
             color: #f8fafc;
             padding: 14px 26px;
             border-radius: 50px;
             font-size: 16px;
             font-weight: 700;
             display: none;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.15);
             white-space: nowrap;
             z-index: 100;
@@ -128,128 +153,125 @@
 </head>
 <body>
 
-    <button id="btn-entrada" class="card-ponto" onclick="processarPonto('ENTRADA')">
-        <div class="badge-icone">☀️</div>
-        <span class="rotulo">Entrada</span>
-        <span class="subrotulo">Chegada ao trabalho</span>
+    <div class="header-bar">
+        <span>CONTROLE DE PONTO</span>
+        <div class="wifi-status">
+            <div id="indicador-wifi" class="dot-status"></div>
+            <span id="texto-wifi">Verificando Wi-Fi...</span>
+        </div>
+    </div>
+
+    <!-- Botão de Entrada -->
+    <button id="btn-entrada" class="card-btn" onclick="registrarPonto('ENTRADA')">
+        <div class="circulo-icone">☀️</div>
+        <span class="texto-principal">Entrada</span>
+        <span class="texto-secundario">Chegada ao trabalho</span>
     </button>
 
-    <button id="btn-saida" class="card-ponto" onclick="processarPonto('SAÍDA')">
-        <div class="badge-icone">🌙</div>
-        <span class="rotulo">Saída</span>
-        <span class="subrotulo">Fim do expediente</span>
+    <!-- Botão de Saída -->
+    <button id="btn-saida" class="card-btn" onclick="registrarPonto('SAÍDA')">
+        <div class="circulo-icone">🌙</div>
+        <span class="texto-principal">Saída</span>
+        <span class="texto-secundario">Fim do expediente</span>
     </button>
 
-    <div id="aviso" class="status-pill">Verificando...</div>
+    <div id="toast" class="toast-notificacao">Processando...</div>
 
     <script>
-        // ================= CONFIGURAÇÕES =================
-        // 1. Cole aqui a URL de implantação da sua planilha (terminada em /exec)
+        // ================= CONFIGURAÇÃO =================
+        // Cole aqui a URL de implantação da sua planilha (terminada em /exec)
         const URL_WEB_APP = https://script.google.com/macros/s/AKfycbzx1kOOKCWoaworM4n7BS7DQwUs-z9zr1ETJuHhdkjP9cVIJlmvAj6rkO2dVWpSX5Wp8w/exec;
-   
 
-        // 2. Deixe true para checar proximidade ou false para registrar direto
-        const VALIDAR_GPS = true;
-
-        // 3. Coordenadas da sua residência:
-        const LAT_CASA = -8,0466951;   
-        const LON_CASA = -34,9080722;  
-
-
-        // Raio expandido para 250m para evitar qualquer erro de sinal indoor
-        const RAIO_METROS = 250;
-        // =================================================
+        // ================================================
 
         let bloqueado = false;
 
+        // Motor de fala imediato
         function falar(texto) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
-                const u = new SpeechSynthesisUtterance(texto);
-                u.lang = 'pt-BR';
-                u.rate = 0.95;
-                window.speechSynthesis.speak(u);
+                const utterance = new SpeechSynthesisUtterance(texto);
+                utterance.lang = 'pt-BR';
+                utterance.rate = 0.92;
+                window.speechSynthesis.speak(utterance);
             }
         }
 
-        function exibirAviso(texto, tempoMs = 3500) {
-            const aviso = document.getElementById("aviso");
-            aviso.innerText = texto;
-            aviso.style.display = "block";
-            if (tempoMs > 0) {
+        function exibirToast(msg, tempo = 3500) {
+            const toast = document.getElementById("toast");
+            toast.innerText = msg;
+            toast.style.display = "block";
+            if (tempo > 0) {
                 setTimeout(() => {
-                    aviso.style.display = "none";
+                    toast.style.display = "none";
                     bloqueado = false;
-                }, tempoMs);
+                }, tempo);
             }
         }
 
-        function enviarParaPlanilha(tipo, horaStr) {
-            exibirAviso(`Gravado: ${tipo} às ${horaStr}`, 3500);
+        // Verifica o tipo de conexão no Android Chrome
+        function verificarConexao() {
+            const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            const dot = document.getElementById("indicador-wifi");
+            const label = document.getElementById("texto-wifi");
 
-            const urlFinal = `${URL_WEB_APP}?acao=${encodeURIComponent(tipo)}&t=${Date.now()}`;
-            fetch(urlFinal, { method: 'GET', mode: 'no-cors' }).catch(() => {
-                const img = new Image();
-                img.src = urlFinal;
-            });
+            if (!conn) {
+                label.innerText = "Rede Online";
+                return { estaNoWifi: true, tipo: 'desconhecido' };
+            }
+
+            // No Android (Chrome e Samsung Browser), conn.type retorna 'wifi' ou 'cellular'
+            const tipo = conn.type || '';
+            const eWifi = (tipo === 'wifi');
+
+            if (eWifi) {
+                dot.classList.add("conectado");
+                label.innerText = "Wi-Fi Conectado";
+            } else {
+                dot.classList.remove("conectado");
+                label.innerText = tipo === 'cellular' ? "4G/5G Móvel" : "Sem Wi-Fi";
+            }
+
+            return { estaNoWifi: eWifi, tipo: tipo };
         }
 
-        function calcularDistancia(lat1, lon1, lat2, lon2) {
-            const R = 6371e3;
-            const phi1 = lat1 * Math.PI / 180;
-            const phi2 = lat2 * Math.PI / 180;
-            const dPhi = (lat2 - lat1) * Math.PI / 180;
-            const dLam = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dPhi / 2) ** 2 + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLam / 2) ** 2;
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        // Monitora em tempo real se ela ligou ou desligou o Wi-Fi
+        const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        if (conn) {
+            conn.addEventListener('change', verificarConexao);
         }
+        verificarConexao();
 
-        function processarPonto(tipo) {
+        function registrarPonto(acao) {
             if (bloqueado) return;
             bloqueado = true;
 
+            const conexao = verificarConexao();
+
+            // REGRA: Se NÃO estiver no Wi-Fi
+            if (!conexao.estaNoWifi) {
+                // Fala obrigatória
+                falar("Conecte-se à rede Wi-Fi do apartamento.");
+                exibirToast("Conecte-se à rede Wi-Fi do apartamento", 4000);
+                return;
+            }
+
+            // Se ESTIVER no Wi-Fi: processa imediatamente
             const agora = new Date();
             const h = agora.getHours();
             const m = ("0" + agora.getMinutes()).slice(-2);
-            const horaStr = `${h}:${m}`;
 
-            if (!VALIDAR_GPS) {
-                falar(`${tipo === 'ENTRADA' ? 'Entrada' : 'Saída'} confirmada às ${h} horas e ${m} minutos.`);
-                enviarParaPlanilha(tipo, horaStr);
-                return;
-            }
+            // Fala de confirmação de entrada ou saída
+            falar(`${acao === 'ENTRADA' ? 'Entrada' : 'Saída'} confirmada às ${h} horas e ${m} minutos.`);
+            exibirToast(`Gravado: ${acao} às ${h}:${m}`, 3500);
 
-            exibirAviso("Verificando local...", 0);
-            falar("Aguarde um momento.");
-
-            if (!navigator.geolocation) {
-                falar("Aparelho sem localização.");
-                exibirAviso("Sem suporte a GPS", 4000);
-                return;
-            }
-
-            // enableHighAccuracy: false utiliza as antenas de celular/redes, retornando na hora dentro de casa
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const dist = Math.round(calcularDistancia(pos.coords.latitude, pos.coords.longitude, LAT_CASA, LON_CASA));
-
-                    if (dist <= RAIO_METROS) {
-                        falar(`${tipo === 'ENTRADA' ? 'Entrada' : 'Saída'} confirmada às ${h} horas e ${m} minutos.`);
-                        enviarParaPlanilha(tipo, horaStr);
-                    } else {
-                        falar("Você precisa estar na residência para bater o ponto.");
-                        exibirAviso(`Fora do local (${dist}m)`, 4500);
-                    }
-                },
-                (erro) => {
-                    // Se houver recusa de permissão ou falha de leitura
-                    falar("Não foi possível confirmar a localização. Verifique as permissões.");
-                    exibirAviso("Permissão de local negada", 4000);
-                },
-                { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
-            );
+            // Dispara para o Google Sheets em segundo plano
+            const urlFinal = `${URL_WEB_APP}?acao=${encodeURIComponent(acao)}&t=${Date.now()}`;
+            fetch(urlFinal, { method: 'GET', mode: 'no-cors' }).catch(() => {
+                const beacon = new Image();
+                beacon.src = urlFinal;
+            });
         }
     </script>
 </body>
 </html>
-
