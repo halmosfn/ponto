@@ -5,13 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ponto</title>
 
-    <!-- Ícones e modo tela cheia -->
-    <link rel="apple-touch-icon" href="icone-192.png">
+    <!-- Metas para funcionamento como Aplicativo de Tela Cheia -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Ponto">
-    <link rel="icon" type="image/png" sizes="192x192" href="icone-192.png">
-    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#090d16">
 
     <style>
@@ -49,26 +46,32 @@
         .wifi-status {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             background: rgba(255, 255, 255, 0.06);
-            padding: 6px 12px;
+            padding: 6px 14px;
             border-radius: 20px;
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .dot-status {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            background-color: #f59e0b; /* Amarelo/Laranja padrão */
+            background-color: #f59e0b; /* Amarelo: checando */
+            transition: background-color 0.3s, box-shadow 0.3s;
         }
 
         .dot-status.conectado {
-            background-color: #10b981; /* Verde */
-            box-shadow: 0 0 8px #10b981;
+            background-color: #10b981; /* Verde: validado */
+            box-shadow: 0 0 10px #10b981;
         }
 
-        /* Cartões dos botões verticais */
+        .dot-status.bloqueado {
+            background-color: #ef4444; /* Vermelho: fora da rede */
+            box-shadow: 0 0 8px #ef4444;
+        }
+
+        /* Cartões dos botões gigantes */
         .card-btn {
             flex: 1;
             display: flex;
@@ -89,13 +92,11 @@
             filter: brightness(0.92);
         }
 
-        /* Cartão Entrada (Verde Esmeralda) */
         #btn-entrada {
             background: linear-gradient(145deg, #10b981 0%, #047857 100%);
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        /* Cartão Saída (Vermelho Rubi) */
         #btn-saida {
             background: linear-gradient(145deg, #f43f5e 0%, #be123c 100%);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -130,7 +131,7 @@
             margin-top: 4px;
         }
 
-        /* Notificação flutuante */
+        /* Notificação flutuante de confirmação */
         .toast-notificacao {
             position: fixed;
             bottom: 35px;
@@ -157,19 +158,19 @@
         <span>CONTROLE DE PONTO</span>
         <div class="wifi-status">
             <div id="indicador-wifi" class="dot-status"></div>
-            <span id="texto-wifi">Verificando Wi-Fi...</span>
+            <span id="texto-wifi">Verificando rede...</span>
         </div>
     </div>
 
-    <!-- Botão de Entrada -->
-    <button id="btn-entrada" class="card-btn" onclick="registrarPonto('ENTRADA')">
+    <!-- Botão Verde: Entrada -->
+    <button id="btn-entrada" class="card-btn" onclick="executarBatida('ENTRADA')">
         <div class="circulo-icone">☀️</div>
         <span class="texto-principal">Entrada</span>
         <span class="texto-secundario">Chegada ao trabalho</span>
     </button>
 
-    <!-- Botão de Saída -->
-    <button id="btn-saida" class="card-btn" onclick="registrarPonto('SAÍDA')">
+    <!-- Botão Vermelho: Saída -->
+    <button id="btn-saida" class="card-btn" onclick="executarBatida('SAÍDA')">
         <div class="circulo-icone">🌙</div>
         <span class="texto-principal">Saída</span>
         <span class="texto-secundario">Fim do expediente</span>
@@ -178,22 +179,25 @@
     <div id="toast" class="toast-notificacao">Processando...</div>
 
     <script>
-        // ================= CONFIGURAÇÃO =================
-        // Cole aqui a URL de implantação da sua planilha (terminada em /exec)
-        const URL_WEB_APP = https://script.google.com/macros/s/AKfycbzx1kOOKCWoaworM4n7BS7DQwUs-z9zr1ETJuHhdkjP9cVIJlmvAj6rkO2dVWpSX5Wp8w/exec;
+        // ================= CONFIGURAÇÕES PRINCIPAIS =================
+        // 1. Cole aqui a URL de publicação do seu Google Apps Script (terminada em /exec)
+        const URL_WEB_APP = "const URL_WEB_APP = https://script.google.com/macros/s/AKfycbzx1kOOKCWoaworM4n7BS7DQwUs-z9zr1ETJuHhdkjP9cVIJlmvAj6rkO2dVWpSX5Wp8w/exec";
 
-        // ================================================
+        // 2. Cole aqui o subdomínio completo que você criou no DuckDNS
+        const DOMINIO_DUCKDNS = "halmos.duckdns.org";
+        // ============================================================
 
-        let bloqueado = false;
+        let redeValidada = false;
+        let emProcessamento = false;
 
-        // Motor de fala imediato
+        // Função de voz em português
         function falar(texto) {
             if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(texto);
-                utterance.lang = 'pt-BR';
-                utterance.rate = 0.92;
-                window.speechSynthesis.speak(utterance);
+                window.speechSynthesis.cancel(); // Para áudios anteriores se houver
+                const voz = new SpeechSynthesisUtterance(texto);
+                voz.lang = 'pt-BR';
+                voz.rate = 0.92;
+                window.speechSynthesis.speak(voz);
             }
         }
 
@@ -204,72 +208,87 @@
             if (tempo > 0) {
                 setTimeout(() => {
                     toast.style.display = "none";
-                    bloqueado = false;
+                    emProcessamento = false;
                 }, tempo);
             }
         }
 
-        // Verifica o tipo de conexão no Android Chrome
-        function verificarConexao() {
-            const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        // Validação comparativa via Google DNS-over-HTTPS (DoH) e Ipify
+        async function checarPresenca() {
             const dot = document.getElementById("indicador-wifi");
             const label = document.getElementById("texto-wifi");
 
-            if (!conn) {
-                label.innerText = "Rede Online";
-                return { estaNoWifi: true, tipo: 'desconhecido' };
+            try {
+                // 1. Consulta o IP público por onde o smartphone está navegando no momento
+                const reqIp = fetch("https://api.ipify.org?format=json").then(r => r.json());
+
+                // 2. Pergunta aos servidores DNS oficiais do Google qual é o IP atual do seu DuckDNS
+                const reqDns = fetch(`https://dns.google/resolve?name=${DOMINIO_DUCKDNS}&type=A&t=${Date.now()}`).then(r => r.json());
+
+                const [resIp, resDns] = await Promise.all([reqIp, reqDns]);
+
+                const ipCelular = resIp && resIp.ip ? resIp.ip.trim() : "";
+                let ipCasa = null;
+
+                if (resDns && resDns.Answer && resDns.Answer.length > 0) {
+                    ipCasa = resDns.Answer[0].data ? resDns.Answer[0].data.trim() : null;
+                }
+
+                // 3. Compara os IPs
+                if (ipCelular && ipCasa && ipCelular === ipCasa) {
+                    redeValidada = true;
+                    dot.className = "dot-status conectado";
+                    label.innerText = "Wi-Fi Residencial";
+                    return true;
+                } else {
+                    redeValidada = false;
+                    dot.className = "dot-status bloqueado";
+                    label.innerText = "Fora do Wi-Fi";
+                    return false;
+                }
+            } catch (e) {
+                console.error("Erro na verificação de rede:", e);
+                dot.className = "dot-status";
+                label.innerText = "Verificando...";
+                return false;
             }
-
-            // No Android (Chrome e Samsung Browser), conn.type retorna 'wifi' ou 'cellular'
-            const tipo = conn.type || '';
-            const eWifi = (tipo === 'wifi');
-
-            if (eWifi) {
-                dot.classList.add("conectado");
-                label.innerText = "Wi-Fi Conectado";
-            } else {
-                dot.classList.remove("conectado");
-                label.innerText = tipo === 'cellular' ? "4G/5G Móvel" : "Sem Wi-Fi";
-            }
-
-            return { estaNoWifi: eWifi, tipo: tipo };
         }
 
-        // Monitora em tempo real se ela ligou ou desligou o Wi-Fi
-        const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-        if (conn) {
-            conn.addEventListener('change', verificarConexao);
-        }
-        verificarConexao();
+        // Executa a checagem ao abrir a página
+        checarPresenca();
 
-        function registrarPonto(acao) {
-            if (bloqueado) return;
-            bloqueado = true;
+        // Reavalia a rede periodicamente a cada 20 segundos
+        setInterval(checarPresenca, 20000);
 
-            const conexao = verificarConexao();
+        async function executarBatida(acao) {
+            if (emProcessamento) return;
+            emProcessamento = true;
 
-            // REGRA: Se NÃO estiver no Wi-Fi
-            if (!conexao.estaNoWifi) {
-                // Fala obrigatória
+            exibirToast("Verificando conexão...", 0);
+
+            // Confirmação instantânea da rede no exato momento do clique
+            const estaNoWifi = await checarPresenca();
+
+            if (!estaNoWifi) {
                 falar("Conecte-se à rede Wi-Fi do apartamento.");
                 exibirToast("Conecte-se à rede Wi-Fi do apartamento", 4000);
                 return;
             }
 
-            // Se ESTIVER no Wi-Fi: processa imediatamente
+            // Horário da confirmação
             const agora = new Date();
             const h = agora.getHours();
             const m = ("0" + agora.getMinutes()).slice(-2);
 
-            // Fala de confirmação de entrada ou saída
+            // Fala e exibe confirmação
             falar(`${acao === 'ENTRADA' ? 'Entrada' : 'Saída'} confirmada às ${h} horas e ${m} minutos.`);
-            exibirToast(`Gravado: ${acao} às ${h}:${m}`, 3500);
+            exibirToast(`Registrado: ${acao} às ${h}:${m}`, 4000);
 
-            // Dispara para o Google Sheets em segundo plano
+            // Envia para o Google Sheets em segundo plano
             const urlFinal = `${URL_WEB_APP}?acao=${encodeURIComponent(acao)}&t=${Date.now()}`;
             fetch(urlFinal, { method: 'GET', mode: 'no-cors' }).catch(() => {
-                const beacon = new Image();
-                beacon.src = urlFinal;
+                const img = new Image();
+                img.src = urlFinal;
             });
         }
     </script>
