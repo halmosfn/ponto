@@ -4,6 +4,138 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ponto</title>
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body, html {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #111827;
+            display: flex;
+            flex-direction: row; /* Em tablets, botões lado a lado aproveitam melhor a tela */
+        }
+        .btn-ponto {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            color: #ffffff;
+        }
+        .btn-ponto:active {
+            opacity: 0.8;
+            transform: scale(0.98);
+        }
+        #btn-entrada {
+            background-color: #16a34a; /* Verde */
+            border-right: 4px solid #111827;
+        }
+        #btn-saida {
+            background-color: #dc2626; /* Vermelho */
+            border-left: 4px solid #111827;
+        }
+        .icone {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+        .rotulo {
+            font-size: 38px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .status-msg {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.75);
+            color: #f9fafb;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <button id="btn-entrada" class="btn-ponto" onclick="baterPonto('ENTRADA')">
+        <span class="icone">☀️</span>
+        <span class="rotulo">Entrada</span>
+    </button>
+
+    <button id="btn-saida" class="btn-ponto" onclick="baterPonto('SAÍDA')">
+        <span class="icone">🌙</span>
+        <span class="rotulo">Saída</span>
+    </button>
+
+    <div id="aviso" class="status-msg">Registrando...</div>
+
+    <script>
+        // COLE A SUA URL DO GOOGLE APPS SCRIPT AQUI (a mesma usada no MacroDroid)
+        const URL_WEB_APP = "https://script.google.com/macros/s/AKfycbzh4nbMemOqsOwjB2leCeQ8BqZglLg_qPXdyO0poPH1BDzF62iQ7c5Zw4a_TuFl80ZQRQ/exec";
+
+        let bloqueado = false;
+
+        function falar(texto) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Cancela falas anteriores
+                const utterance = new SpeechSynthesisUtterance(texto);
+                utterance.lang = 'pt-BR';
+                utterance.rate = 0.9; // Velocidade ligeiramente pausada para clareza
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function baterPonto(tipo) {
+            if (bloqueado) return;
+            bloqueado = true;
+
+            const agora = new Date();
+            const h = agora.getHours();
+            const m = ("0" + agora.getMinutes()).slice(-2);
+
+            // 1. Fala imediata em voz alta para ela
+            const falaTexto = `${tipo === 'ENTRADA' ? 'Entrada' : 'Saída'} confirmada às ${h} horas e ${m} minutos.`;
+            falar(falaTexto);
+
+            // 2. Feedback visual momentâneo
+            const aviso = document.getElementById("aviso");
+            aviso.innerText = `Gravado: ${tipo} às ${h}:${m}`;
+            aviso.style.display = "block";
+
+            // 3. Envia para o Google Sheets via GET (idêntico ao MacroDroid)
+            const urlFinal = `${URL_WEB_APP}?acao=${encodeURIComponent(tipo)}`;
+            fetch(urlFinal, { method: 'GET', mode: 'no-cors' })
+                .catch(err => console.error("Erro na requisição:", err));
+
+            // Cooldown de 4 segundos para evitar toques duplos acidentais
+            setTimeout(() => {
+                bloqueado = false;
+                aviso.style.display = "none";
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
+
+
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ponto</title>
 
     <!-- Ícone para navegador e tela inicial do celular -->
     <link rel="icon" type="image/png" href="icone-192.png">
@@ -53,7 +185,9 @@
 
     <script>
         // Cole aqui a sua URL gerada no Google Apps Script
-        const API_URL = "https://script.google.com/macros/s/AKfycbzh4nbMemOqsOwjB2leCeQ8BqZglLg_qPXdyO0poPH1BDzF62iQ7c5Zw4a_TuFl80ZQRQ/exec";
+        const API_URL = "https://script.google.com/macros/s/1FLU885vj4M0HymIEPR6kZ9I7rki1WTpZf_duTYh0n0GlH6oxg9HVoSBM/exec";
+        //1FLU885vj4M0HymIEPR6kZ9I7rki1WTpZf_duTYh0n0GlH6oxg9HVoSBM
+        //AKfycbzh4nbMemOqsOwjB2leCeQ8BqZglLg_qPXdyO0poPH1BDzF62iQ7c5Zw4a_TuFl80ZQRQ
 
         function falar(texto) {
             if ('speechSynthesis' in window) {
@@ -82,4 +216,3 @@
     </script>
 </body>
 </html>
-
