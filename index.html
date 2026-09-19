@@ -5,13 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ponto</title>
 
-    <!-- Ícone no iPhone / iPad (Safari) -->
     <link rel="apple-touch-icon" href="icone-192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Ponto">
 
-    <!-- Ícone no Android (Chrome) -->
     <link rel="icon" type="image/png" sizes="192x192" href="icone-192.png">
     <link rel="shortcut icon" href="icone-192.png">
     <link rel="manifest" href="manifest.json">
@@ -66,15 +64,16 @@
             bottom: 24px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.9);
             color: #f9fafb;
-            padding: 12px 28px;
+            padding: 14px 28px;
             border-radius: 9999px;
-            font-size: 18px;
+            font-size: 17px;
             font-weight: bold;
             display: none;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
             white-space: nowrap;
+            text-align: center;
         }
     </style>
 </head>
@@ -90,17 +89,24 @@
         <span class="rotulo">Saída</span>
     </button>
 
-    <div id="aviso" class="status-msg">Registrando...</div>
+    <div id="aviso" class="status-msg">Iniciando...</div>
 
     <script>
+        // ================= CONFIGURAÇÕES =================
         // 1. Cole aqui a URL de implantação da sua planilha (terminada em /exec)
-        const URL_WEB_APP = "https://script.google.com/macros/s/COLE_AQUI_SEU_LINK/exec";
+        const URL_WEB_APP = https://script.google.com/macros/s/AKfycbzx1kOOKCWoaworM4n7BS7DQwUs-z9zr1ETJuHhdkjP9cVIJlmvAj6rkO2dVWpSX5Wp8w/exec;
 
-        // 2. Se for usar no tablet residencial, deixe como false (não depende de GPS e nunca falha)
-        const VALIDAR_GPS = false; 
-        const LAT_CASA = -8.05389; 
-        const LON_CASA = -34.88111;
-        const RAIO_METROS = 120;
+        // 2. Validação por GPS:
+        const VALIDAR_GPS = true;
+
+        // 3. COLOQUE AS COORDENADAS EXATAS DA SUA RESIDÊNCIA:
+        // (Abra o Google Maps, clique com o botão direito no seu endereço e copie os números)
+        const LAT_CASA = -8,0466951;   // Substitua pela sua latitude
+        const LON_CASA = -34,9080722;  // Substitua pela sua longitude
+
+        // Raio de tolerância em metros (recomendado: 150m para evitar falhas dentro de casa)
+        const RAIO_METROS = 150;
+        // =================================================
 
         let bloqueado = false;
 
@@ -114,27 +120,34 @@
             }
         }
 
-        function enviarParaPlanilha(tipo, horaStr) {
+        function exibirAviso(texto, tempoMs = 3500) {
             const aviso = document.getElementById("aviso");
-            aviso.innerText = `Gravado: ${tipo} às ${horaStr}`;
+            aviso.innerText = texto;
             aviso.style.display = "block";
+            if (tempoMs > 0) {
+                setTimeout(() => {
+                    aviso.style.display = "none";
+                    bloqueado = false;
+                }, tempoMs);
+            }
+        }
+
+        function enviarParaPlanilha(tipo, horaStr) {
+            exibirAviso(`Gravado: ${tipo} às ${horaStr}`, 3500);
 
             const urlFinal = `${URL_WEB_APP}?acao=${encodeURIComponent(tipo)}&t=${Date.now()}`;
             fetch(urlFinal, { method: 'GET', mode: 'no-cors' }).catch(() => {
                 const img = new Image();
                 img.src = urlFinal;
             });
-
-            setTimeout(() => {
-                bloqueado = false;
-                aviso.style.display = "none";
-            }, 3500);
         }
 
         function calcularDistancia(lat1, lon1, lat2, lon2) {
-            const R = 6371e3;
-            const phi1 = lat1 * Math.PI / 180, phi2 = lat2 * Math.PI / 180;
-            const dPhi = (lat2 - lat1) * Math.PI / 180, dLam = (lon2 - lon1) * Math.PI / 180;
+            const R = 6371e3; // Raio da Terra em metros
+            const phi1 = lat1 * Math.PI / 180;
+            const phi2 = lat2 * Math.PI / 180;
+            const dPhi = (lat2 - lat1) * Math.PI / 180;
+            const dLam = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dPhi / 2) ** 2 + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLam / 2) ** 2;
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         }
@@ -148,37 +161,42 @@
             const m = ("0" + agora.getMinutes()).slice(-2);
             const horaStr = `${h}:${m}`;
 
-            // Executa a fala imediatamente durante o clique para o navegador não barrar o áudio
-            falar(`${tipo === 'ENTRADA' ? 'Entrada' : 'Saída'} confirmada às ${h} horas e ${m} minutos.`);
-
+            // Se a validação por GPS estiver desativada (ex: tablet fixo na parede)
             if (!VALIDAR_GPS) {
+                falar(`${tipo === 'ENTRADA' ? 'Entrada' : 'Saída'} confirmada às ${h} horas e ${m} minutos.`);
                 enviarParaPlanilha(tipo, horaStr);
                 return;
             }
 
-            // Validação opcional com GPS
+            // Mensagem e fala de espera enquanto consulta o satélite
+            exibirAviso("Verificando localização...", 0);
+            falar("Aguarde, verificando localização.");
+
             if (!navigator.geolocation) {
-                enviarParaPlanilha(tipo, horaStr);
+                falar("Seu aparelho não possui suporte a GPS.");
+                exibirAviso("Aparelho sem GPS", 4000);
                 return;
             }
 
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
-                    const dist = calcularDistancia(pos.coords.latitude, pos.coords.longitude, LAT_CASA, LON_CASA);
+                    const dist = Math.round(calcularDistancia(pos.coords.latitude, pos.coords.longitude, LAT_CASA, LON_CASA));
+
                     if (dist <= RAIO_METROS) {
+                        // LOCALIZAÇÃO CONFIRMADA: grava e fala confirmação
+                        falar(`${tipo === 'ENTRADA' ? 'Entrada' : 'Saída'} confirmada às ${h} horas e ${m} minutos.`);
                         enviarParaPlanilha(tipo, horaStr);
                     } else {
+                        // FORA DA RESIDÊNCIA: bloqueia e avisa
                         falar("Ponto não registrado. Você está fora da residência.");
-                        document.getElementById("aviso").innerText = "Fora da residência!";
-                        document.getElementById("aviso").style.display = "block";
-                        setTimeout(() => { bloqueado = false; document.getElementById("aviso").style.display = "none"; }, 3500);
+                        exibirAviso(`Fora da residência (distância: ${dist}m)`, 4500);
                     }
                 },
-                () => {
-                    // Se o GPS oscilar em ambiente fechado, efetua o registro para não perder o ponto
-                    enviarParaPlanilha(tipo, horaStr);
+                (erro) => {
+                    falar("Não foi possível obter a sua localização. Ative o GPS.");
+                    exibirAviso("Erro no GPS ou sem permissão", 4000);
                 },
-                { timeout: 4000, enableHighAccuracy: true }
+                { timeout: 7000, enableHighAccuracy: true, maximumAge: 0 }
             );
         }
     </script>
