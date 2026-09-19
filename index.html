@@ -80,51 +80,109 @@
 
     <div id="aviso" class="status-msg">Registrando...</div>
 
-    <script>
-        // COLE A SUA URL DO GOOGLE APPS SCRIPT AQUI (a mesma usada no MacroDroid)
-        const URL_WEB_APP = "https://script.google.com/macros/s/AKfycbzx1kOOKCWoaworM4n7BS7DQwUs-z9zr1ETJuHhdkjP9cVIJlmvAj6rkO2dVWpSX5Wp8w/exec"
-        
-        let bloqueado = false;
 
+    <script>
+        const URL_WEB_APP = "https://script.google.com/macros/s/AKfycbzx1kOOKCWoaworM4n7BS7DQwUs-z9zr1ETJuHhdkjP9cVIJlmvAj6rkO2dVWpSX5Wp8w/exec";
+    
+        // 1. COLOQUE AS COORDENADAS EXATAS DA SUA CASA AQUI
+        const LATITUDE_CASA = -8.05389;   // Substitua pela latitude da sua residência
+        const LONGITUDE_CASA = -34.88111; // Substitua pela longitude da sua residência
+        const RAIO_MAXIMO_METROS = 100;   // Margem de tolerância (recomendado: 100m para GPS indoor)
+    
+        let bloqueado = false;
+    
         function falar(texto) {
             if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel(); // Cancela falas anteriores
+                window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(texto);
                 utterance.lang = 'pt-BR';
-                utterance.rate = 0.9; // Velocidade ligeiramente pausada para clareza
+                utterance.rate = 0.9;
                 window.speechSynthesis.speak(utterance);
             }
         }
-
+    
+        // Fórmula para calcular distância entre dois pontos geográficos em metros
+        function calcularDistancia(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // Raio da Terra em metros
+            const phi1 = lat1 * Math.PI / 180;
+            const phi2 = lat2 * Math.PI / 180;
+            const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+            const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+    
+            const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+                      Math.cos(phi1) * Math.cos(phi2) *
+                      Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    
+            return R * c;
+        }
+    
         function baterPonto(tipo) {
             if (bloqueado) return;
             bloqueado = true;
-
-            const agora = new Date();
-            const h = agora.getHours();
-            const m = ("0" + agora.getMinutes()).slice(-2);
-
-            // 1. Fala imediata em voz alta para ela
-            const falaTexto = `${tipo === 'ENTRADA' ? 'Entrada' : 'Saída'} confirmada às ${h} horas e ${m} minutos.`;
-            falar(falaTexto);
-
-            // 2. Feedback visual momentâneo
+    
             const aviso = document.getElementById("aviso");
-            aviso.innerText = `Gravado: ${tipo} às ${h}:${m}`;
+            aviso.innerText = "Verificando local...";
             aviso.style.display = "block";
-
-            // 3. Envia para o Google Sheets via GET (idêntico ao MacroDroid)
-            const urlFinal = `${URL_WEB_APP}?acao=${encodeURIComponent(tipo)}`;
-            fetch(urlFinal, { method: 'GET', mode: 'no-cors' })
-                .catch(err => console.error("Erro na requisição:", err));
-
-            // Cooldown de 4 segundos para evitar toques duplos acidentais
-            setTimeout(() => {
-                bloqueado = false;
+    
+            if (!navigator.geolocation) {
+                falar("Seu aparelho não possui GPS.");
                 aviso.style.display = "none";
-            }, 4000);
+                bloqueado = false;
+                return;
+            }
+    
+            navigator.geolocation.getCurrentPosition(
+                (posicao) => {
+                    const latAtual = posicao.coords.latitude;
+                    const lonAtual = posicao.coords.longitude;
+                    const distancia = calcularDistancia(latAtual, lonAtual, LATITUDE_CASA, LONGITUDE_CASA);
+    
+                    // Se estiver dentro do raio da residência
+                    if (distancia <= RAIO_MAXIMO_METROS) {
+                        const agora = new Date();
+                        const h = agora.getHours();
+                        const m = ("0" + agora.getMinutes()).slice(-2);
+    
+                        falar(`${tipo === 'ENTRADA' ? 'Entrada' : 'Saída'} confirmada às ${h} horas e ${m} minutos.`);
+                        aviso.innerText = `Gravado: ${tipo} às ${h}:${m}`;
+    
+                        const urlFinal = `${URL_WEB_APP}?acao=${encodeURIComponent(tipo)}&t=${agora.getTime()}`;
+                        fetch(urlFinal, { method: 'GET', mode: 'no-cors' })
+                            .catch(() => {
+                                const ping = new Image();
+                                ping.src = urlFinal;
+                            });
+    
+                        setTimeout(() => {
+                            bloqueado = false;
+                            aviso.style.display = "none";
+                        }, 4000);
+    
+                    } else {
+                        falar("Atenção. Você precisa estar na residência para bater o ponto.");
+                        aviso.innerText = "Fora da residência!";
+                        setTimeout(() => {
+                            bloqueado = false;
+                            aviso.style.display = "none";
+                        }, 4000);
+                    }
+                },
+                (erro) => {
+                    falar("Não foi possível obter a sua localização. Ative o GPS.");
+                    aviso.innerText = "Erro no GPS";
+                    setTimeout(() => {
+                        bloqueado = false;
+                        aviso.style.display = "none";
+                    }, 4000);
+                },
+                { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+            );
         }
     </script>
-</body>
+
+
+    
+    </body>
 </html>
 
