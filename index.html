@@ -82,7 +82,9 @@
 
     <script>
         // COLE A SUA URL DO GOOGLE APPS SCRIPT AQUI (a mesma usada no MacroDroid)
-        const URL_WEB_APP = "https://script.google.com/macros/s/AKfycbzh4nbMemOqsOwjB2leCeQ8BqZglLg_qPXdyO0poPH1BDzF62iQ7c5Zw4a_TuFl80ZQRQ/exec";
+        const URL_WEB_APP = "https://script.google.com/macros/s/1FLU885vj4M0HymIEPR6kZ9I7rki1WTpZf_duTYh0n0GlH6oxg9HVoSBM/exec";
+        //1FLU885vj4M0HymIEPR6kZ9I7rki1WTpZf_duTYh0n0GlH6oxg9HVoSBM
+        //AKfycbzh4nbMemOqsOwjB2leCeQ8BqZglLg_qPXdyO0poPH1BDzF62iQ7c5Zw4a_TuFl80ZQRQ
 
         let bloqueado = false;
 
@@ -128,91 +130,3 @@
 </body>
 </html>
 
-
-
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ponto</title>
-
-    <!-- Ícone para navegador e tela inicial do celular -->
-    <link rel="icon" type="image/png" href="icone-192.png">
-    <link rel="apple-touch-icon" href="icone-192.png">
-
-    <!-- Modo App em tela cheia -->
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="Ponto">
-
-    <style>
-        body, html { 
-            margin: 0; 
-            padding: 0; 
-            height: 100%; 
-            display: flex; 
-            flex-direction: column; 
-            font-family: Arial, sans-serif; 
-        }
-        .btn { 
-            flex: 1; 
-            border: none; 
-            font-size: 42px; 
-            font-weight: bold; 
-            color: white; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            text-transform: uppercase; 
-            cursor: pointer;
-        }
-        .btn:active { 
-            opacity: 0.7; 
-        }
-        #btn-entrada { 
-            background-color: #4CAF50; /* Verde */
-        }
-        #btn-saida { 
-            background-color: #F44336; /* Vermelho */
-        }
-    </style>
-</head>
-<body>
-
-    <button id="btn-entrada" class="btn" onclick="registrar('Entrada')">ENTRAR</button>
-    <button id="btn-saida" class="btn" onclick="registrar('Saída')">SAIR</button>
-
-    <script>
-        // Cole aqui a sua URL gerada no Google Apps Script
-        const API_URL = "https://script.google.com/macros/s/1FLU885vj4M0HymIEPR6kZ9I7rki1WTpZf_duTYh0n0GlH6oxg9HVoSBM/exec";
-        //1FLU885vj4M0HymIEPR6kZ9I7rki1WTpZf_duTYh0n0GlH6oxg9HVoSBM
-        //AKfycbzh4nbMemOqsOwjB2leCeQ8BqZglLg_qPXdyO0poPH1BDzF62iQ7c5Zw4a_TuFl80ZQRQ
-
-        function falar(texto) {
-            if ('speechSynthesis' in window) {
-                // Cancela falas anteriores caso ela aperte repetidas vezes
-                window.speechSynthesis.cancel();
-
-                const mensagem = new SpeechSynthesisUtterance(texto);
-                mensagem.lang = 'pt-BR';
-                mensagem.rate = 0.95; // Velocidade um pouco mais cadenciada para facilitar a compreensão
-                window.speechSynthesis.speak(mensagem);
-            }
-        }
-
-        function registrar(acao) {
-            // Fala imediatamente no celular assim que ela toca no botão
-            falar(acao + " registrada com sucesso!");
-
-            // Envia o registro para o Google Sheets em segundo plano
-            fetch(API_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ acao: acao })
-            }).catch(erro => console.error("Erro ao enviar dados:", erro));
-        }
-    </script>
-</body>
-</html>
