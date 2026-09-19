@@ -4,9 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ponto</title>
-    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Ícone no iPhone / iPad (Safari) -->
+    <link rel="apple-touch-icon" href="icone-192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Ponto">
+
+    <!-- Ícone no Android (Chrome) -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icone-192.png">
+    <link rel="shortcut icon" href="icone-192.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#111827">
+
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
         body, html {
@@ -16,7 +26,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: #111827;
             display: flex;
-            flex-direction: row; /* Em tablets, botões lado a lado aproveitam melhor a tela */
+            flex-direction: row;
         }
         .btn-ponto {
             flex: 1;
@@ -26,163 +36,151 @@
             justify-content: center;
             border: none;
             cursor: pointer;
-            transition: opacity 0.2s, transform 0.1s;
             color: #ffffff;
+            transition: opacity 0.15s, transform 0.1s;
         }
         .btn-ponto:active {
             opacity: 0.8;
             transform: scale(0.98);
         }
         #btn-entrada {
-            background-color: #16a34a; /* Verde */
-            border-right: 4px solid #111827;
+            background-color: #16a34a;
+            border-right: 3px solid #111827;
         }
         #btn-saida {
-            background-color: #dc2626; /* Vermelho */
-            border-left: 4px solid #111827;
+            background-color: #dc2626;
+            border-left: 3px solid #111827;
         }
         .icone {
             font-size: 80px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
         .rotulo {
-            font-size: 38px;
-            font-weight: 900;
+            font-size: 34px;
+            font-weight: 800;
             letter-spacing: 2px;
             text-transform: uppercase;
         }
         .status-msg {
             position: absolute;
-            bottom: 20px;
+            bottom: 24px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.75);
+            background: rgba(0, 0, 0, 0.85);
             color: #f9fafb;
-            padding: 12px 24px;
-            border-radius: 30px;
+            padding: 12px 28px;
+            border-radius: 9999px;
             font-size: 18px;
             font-weight: bold;
             display: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            white-space: nowrap;
         }
     </style>
 </head>
 <body>
 
-    <button id="btn-entrada" class="btn-ponto" onclick="baterPonto('ENTRADA')">
+    <button id="btn-entrada" class="btn-ponto" onclick="processarPonto('ENTRADA')">
         <span class="icone">☀️</span>
         <span class="rotulo">Entrada</span>
     </button>
 
-    <button id="btn-saida" class="btn-ponto" onclick="baterPonto('SAÍDA')">
+    <button id="btn-saida" class="btn-ponto" onclick="processarPonto('SAÍDA')">
         <span class="icone">🌙</span>
         <span class="rotulo">Saída</span>
     </button>
 
     <div id="aviso" class="status-msg">Registrando...</div>
 
-
     <script>
-        const URL_WEB_APP = "https://script.google.com/macros/s/AKfycbzx1kOOKCWoaworM4n7BS7DQwUs-z9zr1ETJuHhdkjP9cVIJlmvAj6rkO2dVWpSX5Wp8w/exec";
-    
-        // 1. COLOQUE AS COORDENADAS EXATAS DA SUA CASA AQUI
-        const LATITUDE_CASA = -8,0466951;   // latitude da sua residência
-        const LONGITUDE_CASA = -34,9080722; // longitude da sua residência
-        const RAIO_MAXIMO_METROS = 100;   // Margem de tolerância (recomendado: 100m para GPS indoor)
-    
+        // 1. Cole aqui a URL de implantação da sua planilha (terminada em /exec)
+        const URL_WEB_APP = "https://script.google.com/macros/s/COLE_AQUI_SEU_LINK/exec";
+
+        // 2. Se for usar no tablet residencial, deixe como false (não depende de GPS e nunca falha)
+        const VALIDAR_GPS = false; 
+        const LAT_CASA = -8.05389; 
+        const LON_CASA = -34.88111;
+        const RAIO_METROS = 120;
+
         let bloqueado = false;
-    
+
         function falar(texto) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(texto);
-                utterance.lang = 'pt-BR';
-                utterance.rate = 0.9;
-                window.speechSynthesis.speak(utterance);
+                const u = new SpeechSynthesisUtterance(texto);
+                u.lang = 'pt-BR';
+                u.rate = 0.95;
+                window.speechSynthesis.speak(u);
             }
         }
-    
-        // Fórmula para calcular distância entre dois pontos geográficos em metros
-        function calcularDistancia(lat1, lon1, lat2, lon2) {
-            const R = 6371e3; // Raio da Terra em metros
-            const phi1 = lat1 * Math.PI / 180;
-            const phi2 = lat2 * Math.PI / 180;
-            const deltaPhi = (lat2 - lat1) * Math.PI / 180;
-            const deltaLambda = (lon2 - lon1) * Math.PI / 180;
-    
-            const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-                      Math.cos(phi1) * Math.cos(phi2) *
-                      Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    
-            return R * c;
+
+        function enviarParaPlanilha(tipo, horaStr) {
+            const aviso = document.getElementById("aviso");
+            aviso.innerText = `Gravado: ${tipo} às ${horaStr}`;
+            aviso.style.display = "block";
+
+            const urlFinal = `${URL_WEB_APP}?acao=${encodeURIComponent(tipo)}&t=${Date.now()}`;
+            fetch(urlFinal, { method: 'GET', mode: 'no-cors' }).catch(() => {
+                const img = new Image();
+                img.src = urlFinal;
+            });
+
+            setTimeout(() => {
+                bloqueado = false;
+                aviso.style.display = "none";
+            }, 3500);
         }
-    
-        function baterPonto(tipo) {
+
+        function calcularDistancia(lat1, lon1, lat2, lon2) {
+            const R = 6371e3;
+            const phi1 = lat1 * Math.PI / 180, phi2 = lat2 * Math.PI / 180;
+            const dPhi = (lat2 - lat1) * Math.PI / 180, dLam = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dPhi / 2) ** 2 + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLam / 2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        function processarPonto(tipo) {
             if (bloqueado) return;
             bloqueado = true;
-    
-            const aviso = document.getElementById("aviso");
-            aviso.innerText = "Verificando local...";
-            aviso.style.display = "block";
-    
-            if (!navigator.geolocation) {
-                falar("Seu aparelho não possui GPS.");
-                aviso.style.display = "none";
-                bloqueado = false;
+
+            const agora = new Date();
+            const h = agora.getHours();
+            const m = ("0" + agora.getMinutes()).slice(-2);
+            const horaStr = `${h}:${m}`;
+
+            // Executa a fala imediatamente durante o clique para o navegador não barrar o áudio
+            falar(`${tipo === 'ENTRADA' ? 'Entrada' : 'Saída'} confirmada às ${h} horas e ${m} minutos.`);
+
+            if (!VALIDAR_GPS) {
+                enviarParaPlanilha(tipo, horaStr);
                 return;
             }
-    
+
+            // Validação opcional com GPS
+            if (!navigator.geolocation) {
+                enviarParaPlanilha(tipo, horaStr);
+                return;
+            }
+
             navigator.geolocation.getCurrentPosition(
-                (posicao) => {
-                    const latAtual = posicao.coords.latitude;
-                    const lonAtual = posicao.coords.longitude;
-                    const distancia = calcularDistancia(latAtual, lonAtual, LATITUDE_CASA, LONGITUDE_CASA);
-    
-                    // Se estiver dentro do raio da residência
-                    if (distancia <= RAIO_MAXIMO_METROS) {
-                        const agora = new Date();
-                        const h = agora.getHours();
-                        const m = ("0" + agora.getMinutes()).slice(-2);
-    
-                        falar(`${tipo === 'ENTRADA' ? 'Entrada' : 'Saída'} confirmada às ${h} horas e ${m} minutos.`);
-                        aviso.innerText = `Gravado: ${tipo} às ${h}:${m}`;
-    
-                        const urlFinal = `${URL_WEB_APP}?acao=${encodeURIComponent(tipo)}&t=${agora.getTime()}`;
-                        fetch(urlFinal, { method: 'GET', mode: 'no-cors' })
-                            .catch(() => {
-                                const ping = new Image();
-                                ping.src = urlFinal;
-                            });
-    
-                        setTimeout(() => {
-                            bloqueado = false;
-                            aviso.style.display = "none";
-                        }, 4000);
-    
+                (pos) => {
+                    const dist = calcularDistancia(pos.coords.latitude, pos.coords.longitude, LAT_CASA, LON_CASA);
+                    if (dist <= RAIO_METROS) {
+                        enviarParaPlanilha(tipo, horaStr);
                     } else {
-                        falar("Atenção. Você precisa estar na residência para bater o ponto.");
-                        aviso.innerText = "Fora da residência!";
-                        setTimeout(() => {
-                            bloqueado = false;
-                            aviso.style.display = "none";
-                        }, 4000);
+                        falar("Ponto não registrado. Você está fora da residência.");
+                        document.getElementById("aviso").innerText = "Fora da residência!";
+                        document.getElementById("aviso").style.display = "block";
+                        setTimeout(() => { bloqueado = false; document.getElementById("aviso").style.display = "none"; }, 3500);
                     }
                 },
-                (erro) => {
-                    falar("Não foi possível obter a sua localização. Ative o GPS.");
-                    aviso.innerText = "Erro no GPS";
-                    setTimeout(() => {
-                        bloqueado = false;
-                        aviso.style.display = "none";
-                    }, 4000);
+                () => {
+                    // Se o GPS oscilar em ambiente fechado, efetua o registro para não perder o ponto
+                    enviarParaPlanilha(tipo, horaStr);
                 },
-                { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+                { timeout: 4000, enableHighAccuracy: true }
             );
         }
     </script>
-
-
-    
-    </body>
+</body>
 </html>
-
